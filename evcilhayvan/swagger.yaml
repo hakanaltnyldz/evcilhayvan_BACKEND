@@ -1,0 +1,439 @@
+openapi: 3.0.3
+info:
+  title: EvcilHayvan API
+  version: 1.0.0
+  description: |
+    Store, ilan ve mesaj servisleri için temel sözleşme. Tüm hata yanıtları `{message, code, details}` formatındadır.
+servers:
+  - url: http://localhost:4000
+paths:
+  /api/pets:
+    get:
+      summary: Aktif ilanları listele
+      parameters:
+        - in: query
+          name: type
+          schema: { type: string, enum: [adoption, mating] }
+        - in: query
+          name: species
+          schema: { type: string }
+        - in: query
+          name: q
+          schema: { type: string }
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Pet" }
+    post:
+      summary: Yeni ilan oluştur
+      security: [bearerAuth: []]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PetInput"
+      responses:
+        "201":
+          description: Oluşturuldu
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  pet: { $ref: "#/components/schemas/Pet" }
+        default: { $ref: "#/components/responses/Error" }
+  /api/pets/{id}:
+    get:
+      summary: İlan detayı
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Detay
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  pet: { $ref: "#/components/schemas/Pet" }
+        default: { $ref: "#/components/responses/Error" }
+    put:
+      summary: İlan güncelle
+      security: [bearerAuth: []]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PetInput"
+      responses:
+        "200":
+          description: Güncellendi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  pet: { $ref: "#/components/schemas/Pet" }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      summary: İlan sil
+      security: [bearerAuth: []]
+      responses:
+        "200":
+          description: Silindi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        default: { $ref: "#/components/responses/Error" }
+  /api/conversations:
+    get:
+      summary: Kullanıcının sohbetleri
+      security: [bearerAuth: []]
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  conversations:
+                    type: array
+                    items: { $ref: "#/components/schemas/Conversation" }
+    post:
+      summary: Sohbet başlat veya getir
+      security: [bearerAuth: []]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [participantId]
+              properties:
+                participantId: { type: string }
+                relatedPetId: { type: string }
+      responses:
+        "200":
+          description: Sohbet
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  conversation: { $ref: "#/components/schemas/Conversation" }
+        default: { $ref: "#/components/responses/Error" }
+  /api/conversations/{conversationId}:
+    get:
+      summary: Sohbet mesajları
+      security: [bearerAuth: []]
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Mesaj listesi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  messages:
+                    type: array
+                    items: { $ref: "#/components/schemas/Message" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      summary: Mesaj gönder
+      security: [bearerAuth: []]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string }
+      responses:
+        "201":
+          description: Gönderildi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  message: { $ref: "#/components/schemas/Message" }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      summary: Sohbeti sil
+      security: [bearerAuth: []]
+      responses:
+        "200":
+          description: Silindi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        default: { $ref: "#/components/responses/Error" }
+  /api/conversations/message/{messageId}/for-me:
+    patch:
+      summary: Mesajı sadece kendim için sil
+      security: [bearerAuth: []]
+      parameters:
+        - in: path
+          name: messageId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Gizlendi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        default: { $ref: "#/components/responses/Error" }
+  /api/stores/create:
+    post:
+      summary: Mağaza oluştur (seller rolüne geçiş)
+      security: [bearerAuth: []]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [storeName]
+              properties:
+                storeName: { type: string }
+                description: { type: string }
+                logoUrl: { type: string }
+      responses:
+        "201":
+          description: Mağaza ve yeni tokenlar
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  token: { type: string }
+                  refreshToken: { type: string }
+                  store: { $ref: "#/components/schemas/Store" }
+        default: { $ref: "#/components/responses/Error" }
+  /api/stores/me/products:
+    get:
+      summary: Satıcı ürünleri
+      security: [bearerAuth: []]
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  products:
+                    type: array
+                    items: { $ref: "#/components/schemas/Product" }
+    post:
+      summary: Ürün ekle (seller)
+      security: [bearerAuth: []]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, price]
+              properties:
+                title: { type: string }
+                price: { type: number }
+                description: { type: string }
+                photos:
+                  type: array
+                  items: { type: string }
+                stock: { type: integer }
+      responses:
+        "201":
+          description: Oluşturuldu
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  product: { $ref: "#/components/schemas/Product" }
+        default: { $ref: "#/components/responses/Error" }
+  /api/store/products:
+    get:
+      summary: Mağaza vitrinindeki ürünler
+      parameters:
+        - in: query
+          name: category
+          schema: { type: string }
+        - in: query
+          name: q
+          schema: { type: string }
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  products:
+                    type: array
+                    items: { $ref: "#/components/schemas/Product" }
+  /api/store/cart/add:
+    post:
+      summary: Sepete ürün ekle
+      security: [bearerAuth: []]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [productId]
+              properties:
+                productId: { type: string }
+                quantity: { type: integer, default: 1 }
+      responses:
+        "201":
+          description: Eklendi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  item: { $ref: "#/components/schemas/CartItem" }
+        default: { $ref: "#/components/responses/Error" }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        message: { type: string }
+        code: { type: string }
+        details: {}
+    UserSummary:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string }
+        avatarUrl: { type: string }
+    Pet:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        species: { type: string }
+        gender: { type: string }
+        ageMonths: { type: integer }
+        advertType: { type: string }
+        vaccinated: { type: boolean }
+        images:
+          type: array
+          items: { type: string }
+        ownerId: { $ref: "#/components/schemas/UserSummary" }
+    PetInput:
+      type: object
+      required: [name, species, gender, ageMonths, vaccinated]
+      properties:
+        name: { type: string }
+        species: { type: string }
+        gender: { type: string }
+        ageMonths: { type: integer }
+        vaccinated: { type: boolean }
+        advertType: { type: string }
+        images:
+          type: array
+          items: { type: string }
+    Conversation:
+      type: object
+      properties:
+        id: { type: string }
+        participants:
+          type: array
+          items: { $ref: "#/components/schemas/UserSummary" }
+        relatedPet: { $ref: "#/components/schemas/Pet" }
+        lastMessage: { type: string }
+    Message:
+      type: object
+      properties:
+        id: { type: string }
+        conversationId: { type: string }
+        text: { type: string }
+        sender: { $ref: "#/components/schemas/UserSummary" }
+        createdAt: { type: string, format: date-time }
+    Store:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        logoUrl: { type: string }
+    Product:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        price: { type: number }
+        images:
+          type: array
+          items: { type: string }
+        stock: { type: integer }
+        store: { $ref: "#/components/schemas/Store" }
+    CartItem:
+      type: object
+      properties:
+        id: { type: string }
+        product: { $ref: "#/components/schemas/Product" }
+        quantity: { type: integer }
+  responses:
+    Error:
+      description: Standart hata
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
